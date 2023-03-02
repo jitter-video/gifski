@@ -9,3 +9,6 @@
 
 /*.snap
 /*_source.tar.bz2
+
+/pkg
+.vscode

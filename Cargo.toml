@@ -27,9 +27,13 @@ required-features = ["png"]
 [dependencies]
 gifsicle = { version = "1.93.0", optional = true }
 clap = { version = "4.1.1", features = ["cargo"], optional = true }
-gif = { version = "0.12.0", default-features = false, features = ["std", "raii_no_panic"] }
+gif = { version = "0.12.0", default-features = false, features = [
+    "std",
+    "raii_no_panic",
+] }
 gif-dispose = "4.0.0"
-imagequant = "4.1.0"
+# TODO: use imagequant once [104](https://github.com/ImageOptim/libimagequant/pull/104) is merged
+imagequant = { git = "https://github.com/erwanvivien/libimagequant", rev = "4d8c1660e2c8eea5b4202721e887d8556c5121ca", default-features = false }
 imgref = "1.9.4"
 lodepng = { version = "3.7.2", optional = true }
 pbr = { version = "1.0.4", optional = true }
@@ -46,24 +50,35 @@ num-traits = { version = "0.2.15", features = ["i128", "std"] }
 crossbeam-utils = "0.8.12"
 scopeguard = "1.1.0"
 
+# Wasm dependencies
+# TODO: use wasm_thread once [13](https://github.com/chemicstry/wasm_thread/pull/13) is merged
+wasm_thread = { git = "https://github.com/jitter-video/wasm-thread", rev = "1d45e05511b80b17acb3e118dc31d96f08d4a260", optional = true }
+
 [dependencies.ffmpeg]
 package = "ffmpeg-next"
 version = "4.4.0"
 optional = true
 default-features = false
-features = ["codec", "format", "filter", "software-resampling", "software-scaling"]
+features = [
+    "codec",
+    "format",
+    "filter",
+    "software-resampling",
+    "software-scaling",
+]
 
 [features]
 # cargo build will skip the binaries with missing required-features
 # so all CLI dependencies have to be enabled by default
-default = ["gifsicle", "binary"]
+default = ["gifsicle", "binary", "imagequant/threads"]
 binary = ["dep:clap", "png", "pbr", "dep:wild", "dep:natord", "dep:dunce"]
 png = ["lodepng"]
-openmp = [] # deprecated, obsolete
-openmp-static = [] # deprecated, obsolete
+openmp = []                                                                # deprecated, obsolete
+openmp-static = []                                                         # deprecated, obsolete
 video = ["ffmpeg"]
 video-static = ["video", "ffmpeg/build"]
 video-prebuilt-static = ["video", "ffmpeg/static"]
+wasm = ["dep:wasm_thread"]
 
 [lib]
 path = "src/lib.rs"
@@ -88,4 +103,4 @@ strip = true
 targets = ["x86_64-unknown-linux-gnu"]
 
 [patch.crates-io]
-ffmpeg-sys-next = { rev = "78458039d5fac99354f9cb078869f3be3f3af5fb", git = "https://github.com/kornelski/rust-ffmpeg-sys-1"}
+ffmpeg-sys-next = { rev = "78458039d5fac99354f9cb078869f3be3f3af5fb", git = "https://github.com/kornelski/rust-ffmpeg-sys-1" }

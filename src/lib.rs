@@ -29,6 +29,7 @@ mod ordqueue;
 use crate::ordqueue::{OrdQueue, OrdQueueIter};
 pub mod progress;
 use crate::progress::*;
+#[cfg(not(feature = "wasm"))]
 pub mod c_api;
 mod denoise;
 use crate::denoise::*;
@@ -37,13 +38,13 @@ mod encoderust;
 // #[cfg(feature = "gifsicle")]
 // mod encodegifsicle;
 
+mod thread;
 mod minipool;
 
 use crossbeam_channel::{Receiver, Sender};
 use std::io::prelude::*;
 use std::num::NonZeroU8;
 use std::path::PathBuf;
-use std::thread;
 use std::sync::atomic::Ordering::Relaxed;
 
 
@@ -51,7 +52,7 @@ enum FrameSource {
     Pixels(ImgVec<RGBA8>),
     Path(PathBuf),
 }
-struct InputFrameUnresized {
+pub struct InputFrameUnresized {
     /// The pixels to resize and encode
     frame: FrameSource,
     /// Time in seconds when to display the frame. First frame should start at 0.
@@ -135,7 +136,7 @@ impl Default for Settings {
 /// Note that writing will finish only when the collector is dropped.
 /// Collect frames on another thread, or call `drop(collector)` before calling `writer.write()`!
 pub struct Collector {
-    queue: Sender<InputFrameUnresized>,
+    pub queue: Sender<InputFrameUnresized>,
 }
 
 /// Perform GIF writing
@@ -548,9 +549,17 @@ impl Writer {
                 let image = match frame.frame {
                     FrameSource::Pixels(image) => image,
                     FrameSource::Path(path) => {
-                        let image = lodepng::decode32_file(&path)
-                            .map_err(|err| Error::PNG(format!("Can't load {}: {err}", path.display())))?;
-                        Img::new(image.buffer, image.width, image.height)
+                        #[cfg(feature = "wasm")]
+                        {
+                            let _ = path;
+                            unimplemented!()
+                        }
+                        #[cfg(not(feature = "wasm"))]
+                        {
+                            let image = lodepng::decode32_file(&path)
+                                .map_err(|err| Error::PNG(format!("Can't load {}: {err}", path.display())))?;
+                            Img::new(image.buffer, image.width, image.height)
+                        }
                     },
                 };
                 let resized = resized_binary_alpha(image, settings.s.width, settings.s.height)?;
